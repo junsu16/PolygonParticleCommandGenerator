@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft Polygon Particle Command Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-4xl border border-slate-700">
+        <h1 class="text-2xl font-bold mb-6 text-emerald-400 flex items-center gap-2">
+            Polygon Particle Command Generator
+        </h1>
+        
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- 좌측: 입력 폼 및 미리보기 -->
+            <div class="flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-300">Number of Sides (n: 3~32)</label>
+                        <input type="number" id="inputN" min="3" max="32" value="5" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-300">Side Length (l: 0~100)</label>
+                        <input type="number" id="inputL" min="0.1" max="100" step="0.1" value="10" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-300">Points per Side (d: 1~256)</label>
+                        <input type="number" id="inputD" min="1" max="256" value="5" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1 text-slate-300">Particle ID</label>
+                        <input type="text" id="inputParticle" value="minecraft:balloon_gas_particle" placeholder="minecraft:balloon_gas_particle" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mb-6">
+                    <input type="checkbox" id="inputStar" class="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 rounded-sm focus:ring-emerald-500">
+                    <label for="inputStar" class="text-sm font-medium text-slate-300 select-none cursor-pointer"> star shape (n ≥ 5) </label>
+                </div>
+
+                <!-- 추가된 중심 위치 설정 영역 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2 text-slate-300">Center Position Setting</label>
+                    <div class="flex flex-col gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800">
+                        <!-- x, y, z 옵션 -->
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="checkXYZ" class="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 rounded-sm focus:ring-emerald-500">
+                                <label for="checkXYZ" class="text-sm font-medium text-slate-300 select-none cursor-pointer">specific x, y, z coordinates</label>
+                            </div>
+                            <div id="xyzContainer" class="hidden flex gap-2 pl-6 mt-2">
+                                <input type="text" id="inputPosX" placeholder="x" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="inputPosY" placeholder="y" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="inputPosZ" placeholder="z" class="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        
+                        <!-- c 태그 엔티티 옵션 -->
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="checkEntityC" class="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 rounded-sm focus:ring-emerald-500">
+                            <label for="checkEntityC" class="text-sm font-medium text-slate-300 select-none cursor-pointer">position at entity with tag 'c'</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 시각적 미리보기 캔버스 영역 -->
+                <div class="mb-6 lg:mb-0">
+                    <label class="block text-sm font-medium mb-2 text-slate-300">Particle Spread Preview</label>
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 p-4 flex justify-center items-center">
+                        <canvas id="previewCanvas" width="240" height="240" class="w-[240px] h-[240px]"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 우측: 커맨드 출력 창 -->
+            <div class="flex-1 flex flex-col">
+                <div class="flex justify-between items-end mb-1">
+                    <label class="block text-sm font-medium text-slate-300">Command Output</label>
+                    <span id="charCount" class="text-xs font-mono text-emerald-400 font-bold">0 chars</span>
+                </div>
+                <div class="relative flex-1">
+                    <textarea id="outputCommand" readonly class="w-full h-full min-h-[20rem] bg-slate-950 text-emerald-400 font-mono text-xs p-4 rounded-xl border border-slate-800 resize-none block break-all overflow-y-auto"></textarea>
+                    <button id="copyBtn" class="absolute bottom-3 right-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-1.5 rounded-lg text-sm transition-colors cursor-pointer">
+                        copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputN = document.getElementById('inputN');
+        const inputL = document.getElementById('inputL');
+        const inputD = document.getElementById('inputD');
+        const inputParticle = document.getElementById('inputParticle');
+        const inputStar = document.getElementById('inputStar');
+        
+        // 중심 위치 관련 요소
+        const checkXYZ = document.getElementById('checkXYZ');
+        const checkEntityC = document.getElementById('checkEntityC');
+        const xyzContainer = document.getElementById('xyzContainer');
+        const inputPosX = document.getElementById('inputPosX');
+        const inputPosY = document.getElementById('inputPosY');
+        const inputPosZ = document.getElementById('inputPosZ');
+
+        const outputCommand = document.getElementById('outputCommand');
+        const charCount = document.getElementById('charCount'); 
+        const copyBtn = document.getElementById('copyBtn');
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 상호 배타적 체크박스 로직
+        checkXYZ.addEventListener('change', () => {
+            if (checkXYZ.checked) {
+                checkEntityC.checked = false;
+                xyzContainer.classList.remove('hidden');
+            } else {
+                xyzContainer.classList.add('hidden');
+            }
+            generateCommand();
+        });
+
+        checkEntityC.addEventListener('change', () => {
+            if (checkEntityC.checked) {
+                checkXYZ.checked = false;
+                xyzContainer.classList.add('hidden');
+            }
+            generateCommand();
+        });
+
+        // 파티클(점) 분포 미리보기 그리기 함수
+        function drawPreview() {
+            const n = parseInt(inputN.value) || 5;
+            const d = parseInt(inputD.value) || 5;
+            const isStar = inputStar.checked;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const radius = Math.min(cx, cy) - 20; 
+            
+            const step = isStar ? 2 : 1;
+            const vertices = [];
+            
+            for (let i = 0; i < n; i++) {
+                const angle = (i * 2 * Math.PI) / n - (Math.PI / 2);
+                vertices.push({
+                    x: cx + radius * Math.cos(angle),
+                    y: cy + radius * Math.sin(angle)
+                });
+            }
+
+            ctx.fillStyle = '#34d399'; 
+            
+            const pointRadius = d > 20 ? 1.5 : 2.5;
+
+            for (let i = 0; i < n; i++) {
+                const start = vertices[i];
+                const end = vertices[(i + step) % n];
+                
+                if (d <= 1) {
+                    ctx.beginPath();
+                    ctx.arc(start.x, start.y, pointRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    for (let k = 0; k < d; k++) {
+                        const t = k / (d - 1); 
+                        const px = start.x + t * (end.x - start.x);
+                        const py = start.y + t * (end.y - start.y);
+                        
+                        ctx.beginPath();
+                        ctx.arc(px, py, pointRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        const r = (val) => Number(val.toFixed(6));
+
+        // 마인크래프트 커맨드 생성 함수
+        function generateCommand() {
+            const n = parseInt(inputN.value) || 5;
+            const l = parseFloat(inputL.value) || 10.0;
+            let dRaw = parseInt(inputD.value) || 5;
+            const star = inputStar.checked;
+            let particle = inputParticle.value.trim();
+            if (!particle) particle = "minecraft:balloon_gas_particle";
+
+            let d = dRaw - 1;
+            if (d < 1) d = 1;
+
+            let cmd = `/execute positioned 0 0 0 rotated as @e[tag=b] positioned ^^^1 rotated as @e[tag=b] positioned ^^^2 rotated as @e[tag=b] positioned ^^^4 rotated as @e[tag=b] positioned ^^^8 rotated as @e[tag=b] positioned ^^^16 positioned 0 ~16 0 align y unless block ~~${r(320 - n)}~ jigsaw `;
+
+            for (let i = 0; i < n - 1; i++) {
+                cmd += `facing ~ 0 ~ positioned ^^^1 facing 0 ~10000 0 positioned 0 ~10000 0 rotated ~${r(360 / n)}~ positioned ^^^-10000 align y `;
+            }
+
+            const midFacing = (1 + 1 / Math.tan(Math.PI / n)) / 2;
+            cmd += `facing 0.0 ~ ${r(midFacing)} positioned 0 0 0 positioned ^^^1 `;
+
+            if (d % 2 !== 0) {
+                cmd += `positioned ~~${r(l / (2 * d))}~ `;
+            }
+
+            const maxPower = Math.floor(Math.log2(d - 1)) + 1;
+            if (d > 1 && isFinite(maxPower)) {
+                for (let i = 0; i <= maxPower; i++) {
+                    const step = (l / (2 * d)) * Math.pow(2, i);
+                    cmd += `rotated as @e[tag=b] positioned ^^^${r(step)} rotated ~180~ positioned ^^^${r(step)} `;
+                }
+            }
+
+            cmd += `unless block ~~${r(-64 + l / 2)}~ jigsaw unless block ~~${r(320 - l / 2)}~ jigsaw `;
+
+            const starFactor = star ? 2 : 1;
+            const p1 = l / (2 * Math.tan((starFactor * Math.PI) / n));
+            const p2 = 10000 + l / (2 * d);
+            const sqrt2_20000 = 20000 * Math.sqrt(2);
+
+            cmd += `facing 0 0 0 rotated ~ 0 positioned ^^10000^10001 facing 0 0 0 positioned ^^^${r(sqrt2_20000)} rotated ~ 0 positioned ^${r(p1)}^10000^-${r(p2)} `;
+
+            // 중심 위치 설정에 따른 커맨드 추가 (run 직전)
+            if (checkXYZ.checked) {
+                const px = inputPosX.value.trim() || '0';
+                const py = inputPosY.value.trim() || '0';
+                const pz = inputPosZ.value.trim() || '0';
+                cmd += `facing 0 ~10000 0 positioned ${px} ${py} ${pz} positioned ^^^-10000 positioned ~~10000~ `;
+            } else if (checkEntityC.checked) {
+                cmd += `facing 0 ~10000 0 positioned as @e[tag=c] positioned ^^^-10000 positioned ~~10000~ `;
+            }
+
+            cmd += `run particle ${particle} ~~~`;
+
+            outputCommand.value = cmd;
+            
+            charCount.textContent = `${cmd.length} chars`;
+            drawPreview(); 
+        }
+
+        // 이벤트 리스너 등록
+        [inputN, inputL, inputD, inputParticle, inputStar, inputPosX, inputPosY, inputPosZ].forEach(element => {
+            element.addEventListener('input', generateCommand);
+        });
+
+        // 복사 기능
+        copyBtn.addEventListener('click', () => {
+            outputCommand.select();
+            navigator.clipboard.writeText(outputCommand.value).then(() => {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "copied!";
+                copyBtn.classList.remove('bg-emerald-500');
+                copyBtn.classList.add('bg-blue-500', 'text-white');
+                setTimeout(() => {
+                    copyBtn.innerText = originalText;
+                    copyBtn.classList.remove('bg-blue-500', 'text-white');
+                    copyBtn.classList.add('bg-emerald-500');
+                }, 1500);
+            });
+        });
+
+        generateCommand();
+    </script>
+</body>
+</html>

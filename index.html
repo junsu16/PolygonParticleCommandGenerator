@@ -182,7 +182,7 @@
             }
         }
 
-        const r = (val) => Number(val.toFixed(6));
+        const r = (val) => val.toFixed(6);  // 0 제거 없도록 수정
 
         // 마인크래프트 커맨드 생성 함수
         function generateCommand() {
